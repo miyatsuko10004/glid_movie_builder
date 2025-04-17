@@ -1,6 +1,5 @@
 # 仮想環境
 venv/
-fresh_venv/
 env/
 .env
 
@@ -39,40 +38,3 @@ wheels/
 .Trashes
 ehthumbs.db
 Thumbs.db
-
-/image_01.jpeg
-/image_02.jpeg
-/image_03.jpeg
-/image_04.jpeg
-/image_05.jpeg
-/image_06.jpeg
-/image_10.jpeg
-/image_11.jpeg
-/image_12.jpeg
-/image_13.jpeg
-/image_14.jpeg
-/image_15.jpeg
-/image_16.jpeg
-/image_17.jpeg
-/image_18.jpeg
-/image_19.jpeg
-/image_20.jpeg
-/image_21.jpeg
-/image_22.jpeg
-/image_23.jpeg
-/image_24.jpeg
-/image_25.jpeg
-/image_26.jpeg
-/image_27.jpeg
-/image_28.jpeg
-/image_29.jpeg
-/image_30.jpeg
-/image_31.jpeg
-/image_32.jpeg
-/image_33.jpeg
-/image_34.jpeg
-/image_35.jpeg
-/image_36.jpeg
-/image_7.jpeg
-/image_8.jpeg
-/image_9.jpeg
