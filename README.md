@@ -7,6 +7,11 @@
 - Python 3.11以上
 - pip（Pythonパッケージマネージャー）
 
+## 注意事項
+
+このツールは特定のバージョンのパッケージに依存しています：
+- moviepy 1.0.3（新しいバージョンでは動作しません）
+
 ## セットアップ手順
 
 ### 自動セットアップ（推奨）
@@ -36,7 +41,12 @@ venv\Scripts\activate  # Windows
 ```bash
 pip install -r requirements.txt
 # または
-pip install opencv-python moviepy numpy python-dotenv Pillow
+pip install opencv-python moviepy==1.0.3 numpy python-dotenv Pillow
+```
+
+3. 必要なディレクトリの作成
+```bash
+mkdir -p source output
 ```
 
 ## 使用方法
@@ -49,6 +59,8 @@ pip install opencv-python moviepy numpy python-dotenv Pillow
 ```bash
 python execute.py
 ```
+
+生成された動画は `output` ディレクトリに保存されます。
 
 ## 環境変数による設定
 

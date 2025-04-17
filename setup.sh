@@ -16,13 +16,19 @@ source $VENV_DIR/bin/activate
 
 # 必要なパッケージをインストール
 echo "必要なパッケージをインストールしています..."
-pip install opencv-python moviepy numpy python-dotenv Pillow
+pip install -r requirements.txt
 
 # sourceディレクトリがなければ作成
 if [ ! -d "source" ]; then
     echo "sourceディレクトリを作成しています..."
     mkdir source
     echo "画像ファイルは source ディレクトリに配置してください"
+fi
+
+# outputディレクトリがなければ作成
+if [ ! -d "output" ]; then
+    echo "outputディレクトリを作成しています..."
+    mkdir output
 fi
 
 echo "セットアップが完了しました！"

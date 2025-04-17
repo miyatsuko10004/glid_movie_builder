@@ -17,13 +17,19 @@ call %VENV_DIR%\Scripts\activate
 
 REM 必要なパッケージをインストール
 echo 必要なパッケージをインストールしています...
-pip install opencv-python moviepy numpy python-dotenv Pillow
+pip install -r requirements.txt
 
 REM sourceディレクトリがなければ作成
 if not exist source (
     echo sourceディレクトリを作成しています...
     mkdir source
     echo 画像ファイルは source ディレクトリに配置してください
+)
+
+REM outputディレクトリがなければ作成
+if not exist output (
+    echo outputディレクトリを作成しています...
+    mkdir output
 )
 
 echo セットアップが完了しました！
