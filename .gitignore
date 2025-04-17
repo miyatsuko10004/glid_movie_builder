@@ -1,3 +1,45 @@
+# 仮想環境
+venv/
+fresh_venv/
+env/
+.env
+
+# 生成されるファイル
+output/
+source/
+temp_*.jpeg
+
+# Python
+__pycache__/
+*.py[cod]
+*$py.class
+*.so
+.Python
+build/
+develop-eggs/
+dist/
+downloads/
+eggs/
+.eggs/
+lib/
+lib64/
+parts/
+sdist/
+var/
+wheels/
+*.egg-info/
+.installed.cfg
+*.egg
+
+# OS固有のファイル
+.DS_Store
+.DS_Store?
+._*
+.Spotlight-V100
+.Trashes
+ehthumbs.db
+Thumbs.db
+
 /image_01.jpeg
 /image_02.jpeg
 /image_03.jpeg
@@ -34,4 +76,3 @@
 /image_7.jpeg
 /image_8.jpeg
 /image_9.jpeg
-/venv
