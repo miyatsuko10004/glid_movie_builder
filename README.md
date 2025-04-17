@@ -9,6 +9,21 @@
 
 ## セットアップ手順
 
+### 自動セットアップ（推奨）
+
+#### macOS/Linux
+```bash
+chmod +x setup.sh  # 実行権限を付与
+./setup.sh
+```
+
+#### Windows
+```
+setup.bat
+```
+
+### 手動セットアップ
+
 1. 仮想環境の作成（推奨）
 ```bash
 python -m venv venv
@@ -19,6 +34,8 @@ venv\Scripts\activate  # Windows
 
 2. 必要なパッケージのインストール
 ```bash
+pip install -r requirements.txt
+# または
 pip install opencv-python moviepy numpy python-dotenv Pillow
 ```
 
