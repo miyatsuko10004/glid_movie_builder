@@ -84,6 +84,13 @@ ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
 output_path = os.getenv('OUTPUT_FILENAME', 'output/sliding_tiles.mp4')
 OUTPUT_FILENAME = os.path.join(ROOT_DIR, output_path)
 
+# 動画の枠サイズ設定
+# プリセット値: 'HD'(1920x1080), 'HD_HALF'(1920x540) または 'AUTO'(グリッドサイズから自動計算)
+FRAME_SIZE_PRESET = os.getenv('FRAME_SIZE_PRESET', 'AUTO')
+# カスタムサイズを指定する場合（FRAME_SIZE_PRESET=CUSTOMの場合に使用）
+FRAME_WIDTH = int(os.getenv('FRAME_WIDTH', 1920))
+FRAME_HEIGHT = int(os.getenv('FRAME_HEIGHT', 1080))
+
 ASPECT_RATIO_W = int(os.getenv('ASPECT_RATIO_W', 4))
 ASPECT_RATIO_H = int(os.getenv('ASPECT_RATIO_H', 3))
 CROP_POSITION = os.getenv('CROP_POSITION', 'center')
@@ -191,14 +198,38 @@ background = background.set_duration(ANIMATION_DURATION)
 # 全てのクリップを合成
 composite = CompositeVideoClip([background] + clips, size=(frame_w, frame_h))
 
+# 最終的な動画の枠サイズを設定
+if FRAME_SIZE_PRESET == 'HD':
+    final_width = 1920
+    final_height = 1080
+elif FRAME_SIZE_PRESET == 'HD_HALF':
+    final_width = 1920
+    final_height = 540
+elif FRAME_SIZE_PRESET == 'CUSTOM':
+    final_width = FRAME_WIDTH
+    final_height = FRAME_HEIGHT
+else:  # 'AUTO'
+    final_width = frame_w
+    final_height = frame_h
+
 # スライド用のアニメーション（左→右）
 # SLIDE_SPEEDを適用してスライド速度を調整
 animated = composite.set_duration(ANIMATION_DURATION).set_position(
     lambda t: (-frame_w * t * SLIDE_SPEED / ANIMATION_DURATION, 0)
 )
 
-# 動画として書き出し
-final = CompositeVideoClip([animated], size=(frame_w, frame_h))
+# 指定されたサイズの背景を作成（最終的な動画サイズ）
+final_background = ColorClip(size=(final_width, final_height), color=BACKGROUND_COLOR)
+final_background = final_background.set_duration(ANIMATION_DURATION)
+
+# アニメーションを中央に配置するための計算
+y_position = (final_height - frame_h) // 2 if final_height > frame_h else 0
+
+# アニメーションのクリップを中央に配置
+positioned_animation = animated.set_position((0, y_position))
+
+# 最終的な動画の作成
+final = CompositeVideoClip([final_background, positioned_animation], size=(final_width, final_height))
 final.write_videofile(OUTPUT_FILENAME, fps=FPS, codec='libx264')
 
 # 一時ファイルを削除
