@@ -6,6 +6,7 @@ env/
 # 生成されるファイル
 output/
 source/
+upload/
 temp_*.jpeg
 
 # Python
