@@ -64,7 +64,7 @@ mkdir -p source output upload
 ### 動画生成
 
 ```bash
-python execute.py
+./execute.sh
 ```
 
 生成された動画は `output` ディレクトリに保存されます。
@@ -80,11 +80,30 @@ python execute.py
    
 2. 変換スクリプトを実行
 ```bash
-python convert.py
+./convert.sh
 ```
 
 3. 変換処理が完了すると、画像は自動的に `source` ディレクトリに移動し、`image_XX.jpeg` の形式でリネームされます
    - 既に `source` ディレクトリに画像がある場合、新しい画像は既存の番号の続きから番号付けされます
+
+### GUI アプリケーションとして実行する（macOS）
+
+macOSでは、シェルスクリプトをGUIアプリケーションとして実行することもできます。
+
+1. アプリケーションをビルドする
+```bash
+# Convert.appをビルド
+osacompile -o apps/Convert.app Convert.applescript
+
+# Execute.appをビルド
+osacompile -o apps/Execute.app Execute.applescript
+```
+
+2. `apps` ディレクトリから、以下のアプリケーションをダブルクリックして実行できます：
+   - `Convert.app`: 画像変換処理を実行
+   - `Execute.app`: 動画生成を実行
+
+これらのアプリケーションは、ターミナルウィンドウを自動的に開き、対応するスクリプトを実行します。
 
 ### 特徴
 
@@ -118,16 +137,16 @@ python convert.py
 
 ```bash
 # 背景色を黒に設定
-BACKGROUND_COLOR=black python execute.py
+BACKGROUND_COLOR=black ./execute.sh
 
 # グリッドサイズを4x4に設定
-GRID_ROWS=4 GRID_COLS=4 python execute.py
+GRID_ROWS=4 GRID_COLS=4 ./execute.sh
 
 # アニメーション時間を6秒に設定
-ANIMATION_DURATION=6 python execute.py
+ANIMATION_DURATION=6 ./execute.sh
 
 # 複数の設定を組み合わせる
-BACKGROUND_COLOR=white GRID_ROWS=5 GRID_COLS=5 ANIMATION_DURATION=5 python execute.py
+BACKGROUND_COLOR=white GRID_ROWS=5 GRID_COLS=5 ANIMATION_DURATION=5 ./execute.sh
 ```
 
 ## ディレクトリ構成
@@ -135,11 +154,21 @@ BACKGROUND_COLOR=white GRID_ROWS=5 GRID_COLS=5 ANIMATION_DURATION=5 python execu
 ```
 prfile_movie_source/
 ├── README.md
-├── execute.py         # メイン動画生成スクリプト
-├── convert.py         # 画像変換スクリプト
+├── convert.sh         # 画像変換スクリプトのラッパー
+├── execute.sh         # 動画生成スクリプトのラッパー
+├── Convert.applescript # macOS用画像変換アプリスクリプト
+├── Execute.applescript # macOS用動画生成アプリスクリプト
+├── commands/          # コマンドスクリプトディレクトリ
+│   ├── convert.py     # 画像変換スクリプト
+│   ├── convert.sh     # 画像変換シェルスクリプト
+│   ├── execute.py     # 動画生成スクリプト
+│   └── execute.sh     # 動画生成シェルスクリプト
+├── apps/              # macOS用アプリケーションディレクトリ (生成後)
+│   ├── Convert.app    # 画像変換アプリケーション
+│   └── Execute.app    # 動画生成アプリケーション
 ├── requirements.txt   # 依存パッケージリスト
 ├── output/            # 出力動画ディレクトリ
-│   └── sliding_tiles.mp4   # 生成される動画ファイル
+│   └── sliding_tiles.mp4  # 生成される動画ファイル
 ├── source/            # 入力画像ディレクトリ
 │   ├── image_01.jpeg
 │   ├── image_02.jpeg
