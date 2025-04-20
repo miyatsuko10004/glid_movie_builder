@@ -49,6 +49,12 @@ pip install opencv-python moviepy==1.0.3 numpy python-dotenv Pillow
 mkdir -p source output upload
 ```
 
+4. 環境変数設定ファイルの作成（任意）
+```bash
+cp .env.sample .env  # サンプルファイルからコピー
+```
+必要に応じて`.env`ファイルを編集して設定をカスタマイズできます。
+
 ## 使用方法
 
 ### 画像の準備
@@ -114,26 +120,50 @@ osacompile -o apps/Execute.app Execute.applescript
 
 ## 環境変数による設定
 
-以下の環境変数を使用して、動画の生成設定をカスタマイズできます：
+### .envファイルを使用した設定
 
-| 環境変数 | 説明 | デフォルト値 |
-|----------|------|--------------|
-| START_IMAGE_NUMBER | 開始画像番号 | 1 |
-| END_IMAGE_NUMBER | 終了画像番号 | 36 |
-| IMAGE_HEIGHT | 画像の高さ（ピクセル） | 100 |
-| GRID_ROWS | グリッドの行数 | 6 |
-| GRID_COLS | グリッドの列数 | 6 |
-| ANIMATION_DURATION | アニメーション時間（秒） | 4 |
-| FPS | フレームレート | 30 |
-| OUTPUT_FILENAME | 出力ファイル名 | sliding_tiles.mp4 |
-| ASPECT_RATIO_W | アスペクト比（幅） | 4 |
-| ASPECT_RATIO_H | アスペクト比（高さ） | 3 |
-| CROP_POSITION | クロップ位置（center/left/right/top/bottom） | center |
-| BACKGROUND_COLOR | 背景色（white/black/red/green/blue または R,G,B形式） | 255,255,255 |
-| GAP_HORIZONTAL | 画像間の水平方向の間隔（ピクセル） | 0 |
-| GAP_VERTICAL | 画像間の垂直方向の間隔（ピクセル） | 0 |
+プロジェクトルートに`.env`ファイルを作成することで、実行時の設定をカスタマイズできます。
+このファイルに設定した環境変数は、スクリプト実行時に自動的に読み込まれます。
 
-### 使用例
+サンプル設定ファイル`.env.sample`が提供されており、これをコピーして独自の設定を行えます：
+
+```bash
+cp .env.sample .env
+```
+
+以下は.envファイルの例です：
+
+```
+# 画像の範囲設定
+START_IMAGE_NUMBER=1
+END_IMAGE_NUMBER=36
+
+# グリッドの設定
+GRID_ROWS=6
+GRID_COLS=6
+GAP_HORIZONTAL=0
+GAP_VERTICAL=0
+
+# 画像のサイズと形式
+IMAGE_HEIGHT=100
+ASPECT_RATIO_W=4
+ASPECT_RATIO_H=3
+CROP_POSITION=center
+
+# 背景色
+BACKGROUND_COLOR=255,255,255
+
+# アニメーションの設定
+ANIMATION_DURATION=4
+FPS=30
+
+# 出力設定
+OUTPUT_FILENAME=output/sliding_tiles.mp4
+```
+
+### コマンドラインでの設定
+
+一時的に設定を変更したい場合は、コマンドライン上で環境変数を指定することもできます：
 
 ```bash
 # 背景色を黒に設定
@@ -149,11 +179,32 @@ ANIMATION_DURATION=6 ./execute.sh
 BACKGROUND_COLOR=white GRID_ROWS=5 GRID_COLS=5 ANIMATION_DURATION=5 ./execute.sh
 ```
 
+### 設定項目一覧
+
+| 環境変数 | 説明 | デフォルト値 |
+|----------|------|--------------|
+| START_IMAGE_NUMBER | 開始画像番号 | 1 |
+| END_IMAGE_NUMBER | 終了画像番号 | 36 |
+| IMAGE_HEIGHT | 画像の高さ（ピクセル） | 100 |
+| GRID_ROWS | グリッドの行数 | 6 |
+| GRID_COLS | グリッドの列数 | 6 |
+| ANIMATION_DURATION | アニメーション時間（秒） | 4 |
+| FPS | フレームレート | 30 |
+| OUTPUT_FILENAME | 出力ファイル名 | output/sliding_tiles.mp4 |
+| ASPECT_RATIO_W | アスペクト比（幅） | 4 |
+| ASPECT_RATIO_H | アスペクト比（高さ） | 3 |
+| CROP_POSITION | クロップ位置（center/left/right/top/bottom） | center |
+| BACKGROUND_COLOR | 背景色（white/black/red/green/blue または R,G,B形式） | 255,255,255 |
+| GAP_HORIZONTAL | 画像間の水平方向の間隔（ピクセル） | 0 |
+| GAP_VERTICAL | 画像間の垂直方向の間隔（ピクセル） | 0 |
+
 ## ディレクトリ構成
 
 ```
 prfile_movie_source/
 ├── README.md
+├── .env.sample         # 環境変数設定ファイルのサンプル
+├── .env                # 環境変数設定ファイル（gitignore対象）
 ├── convert.sh         # 画像変換スクリプトのラッパー
 ├── execute.sh         # 動画生成スクリプトのラッパー
 ├── Convert.applescript # macOS用画像変換アプリスクリプト
