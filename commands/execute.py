@@ -6,6 +6,7 @@ from PIL import Image
 import re
 import cv2
 from pathlib import Path
+import sys
 
 # .envファイルから環境変数を読み込む
 load_dotenv()
@@ -129,7 +130,7 @@ def crop_image_to_aspect_ratio(image_path, aspect_ratio_w, aspect_ratio_h, crop_
         img.save(temp_path)
         return temp_path
 
-# 画像ファイル名を生成する関数
+# 画像ファイル名の生成関数
 def get_image_filename(i):
     # プロジェクトルートディレクトリのパスを取得
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -138,9 +139,22 @@ def get_image_filename(i):
     return os.path.join(root_dir, f"source/image_{i:02d}.jpeg")
 
 # 画像を読み込み、トリミングして一時ファイルとして保存
-image_files = [get_image_filename(i) for i in range(START_IMAGE_NUMBER, END_IMAGE_NUMBER + 1)]
+image_files_list = []
+for i in range(START_IMAGE_NUMBER, END_IMAGE_NUMBER + 1):
+    img_path = get_image_filename(i)
+    if os.path.exists(img_path):
+        image_files_list.append(img_path)
+    else:
+        print(f"警告: 画像ファイル {img_path} が見つかりません。スキップします。")
+
+# 画像が一つも見つからない場合はエラーで終了
+if not image_files_list:
+    print("エラー: 有効な画像が見つかりません。処理を中止します。")
+    sys.exit(1)
+
+# 画像のトリミングと一時ファイルの作成
 temp_image_files = [crop_image_to_aspect_ratio(img, ASPECT_RATIO_W, ASPECT_RATIO_H, CROP_POSITION) 
-                   for img in image_files]
+                   for img in image_files_list]
 
 # トリミングした画像を読み込んでリサイズ
 images = [ImageClip(img).resize(height=IMAGE_HEIGHT) for img in temp_image_files]
