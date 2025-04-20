@@ -5,9 +5,21 @@
 # このスクリプトは execute.py を実行するためのシェルスクリプトです。
 # 必要に応じて仮想環境を有効化し、Pythonスクリプトを実行します。
 
-# スクリプトが存在するディレクトリに移動し、そこからプロジェクトルートへ
+# プロジェクトルートディレクトリに移動
 cd "$(dirname "$0")"
 cd ..
+
+# ディレクトリ情報の表示
+echo "実行ディレクトリ: $(pwd)"
+ls -la utils/  # utilsディレクトリの内容確認
+
+# 追加: 環境変数を設定してプロジェクトルートをPythonパスに追加
+export PYTHONPATH="$(pwd)"
+
+# デバッグ情報
+echo "Pythonパス: $PYTHONPATH"
+echo "Python情報:"
+python --version
 
 # 仮想環境が存在するか確認
 if [ -d "venv" ]; then
