@@ -97,7 +97,9 @@ def convert_and_move_images(upload_dir, source_dir):
         int: 処理した画像の数
     """
     # アップロードディレクトリ内の画像ファイルを取得
-    image_extensions = ['*.jpg', '*.jpeg', '*.png', '*.gif', '*.bmp', '*.tiff']
+    # 小文字と大文字の両方の拡張子に対応
+    image_extensions = ['*.jpg', '*.JPG', '*.jpeg', '*.JPEG', '*.png', '*.PNG', 
+                        '*.gif', '*.GIF', '*.bmp', '*.BMP', '*.tiff', '*.TIFF']
     image_files = []
     
     for ext in image_extensions:

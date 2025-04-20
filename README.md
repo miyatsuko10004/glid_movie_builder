@@ -82,7 +82,8 @@ cp .env.sample .env  # サンプルファイルからコピー
 ### 使用方法
 
 1. 変換したい画像ファイルを `upload` ディレクトリに配置
-   - 対応フォーマット: JPEG, JPG, PNG, GIF, BMP, TIFF
+   - 対応フォーマット: jpg/JPG, jpeg/JPEG, png/PNG, gif/GIF, bmp/BMP, tiff/TIFF
+   - 小文字・大文字どちらの拡張子にも対応
    
 2. 変換スクリプトを実行
 ```bash
@@ -114,6 +115,7 @@ osacompile -o apps/Execute.app Execute.applescript
 ### 特徴
 
 - 画像形式の自動変換（PNG, GIF, BMPなどをJPEGに変換）
+- 小文字・大文字の拡張子に対応（.jpg/.JPGなど）
 - 透明背景の画像は白色背景に変換
 - 連番管理（既存の番号の続きから番号付け）
 - 無効な画像ファイルの検出とスキップ
