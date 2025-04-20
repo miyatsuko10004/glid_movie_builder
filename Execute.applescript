@@ -5,11 +5,18 @@
 -- ダブルクリックで実行できるようにするためのラッパー
 
 on run
+	-- スクリプトのディレクトリを取得
+	set scriptPath to POSIX path of ((path to me as text) & "::")
+	
 	tell application "Terminal"
-		-- スクリプトのディレクトリを取得
-		set scriptPath to (POSIX path of ((path to me as text) & "::"))
-		-- activateをtrueにすると、Terminal.appがフォーカスされる
-		do script "cd \"" & scriptPath & "\" && ./execute.sh" in front window
 		activate
+		
+		-- 新しいウィンドウを開くか、既存のウィンドウを使用
+		if (count of windows) is 0 then
+			do script ""
+		end if
+		
+		-- 最前面のウィンドウでコマンドを実行
+		do script "cd \"" & scriptPath & "\" && ./execute.sh" in window 1
 	end tell
 end run 
