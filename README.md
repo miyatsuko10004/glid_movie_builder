@@ -46,21 +46,52 @@ pip install opencv-python moviepy==1.0.3 numpy python-dotenv Pillow
 
 3. 必要なディレクトリの作成
 ```bash
-mkdir -p source output
+mkdir -p source output upload
 ```
 
 ## 使用方法
+
+### 画像の準備
 
 1. 画像ファイルを `source` ディレクトリに配置
    - 対応フォーマット: JPEG
    - ファイル名形式: `image_01.jpeg`, `image_02.jpeg`, ... （連番）
 
-2. プログラムの実行
+または
+
+2. 画像変換ツールを使用して画像を準備（下記の「画像変換ツール」セクションを参照）
+
+### 動画生成
+
 ```bash
 python execute.py
 ```
 
 生成された動画は `output` ディレクトリに保存されます。
+
+## 画像変換ツール
+
+このプロジェクトには画像を簡単に追加するための変換ツールが含まれています。このツールを使用すると、さまざまな形式の画像ファイルを適切な形式（JPEG）に変換し、正しい命名規則で `source` ディレクトリに配置できます。
+
+### 使用方法
+
+1. 変換したい画像ファイルを `upload` ディレクトリに配置
+   - 対応フォーマット: JPEG, JPG, PNG, GIF, BMP, TIFF
+   
+2. 変換スクリプトを実行
+```bash
+python convert.py
+```
+
+3. 変換処理が完了すると、画像は自動的に `source` ディレクトリに移動し、`image_XX.jpeg` の形式でリネームされます
+   - 既に `source` ディレクトリに画像がある場合、新しい画像は既存の番号の続きから番号付けされます
+
+### 特徴
+
+- 画像形式の自動変換（PNG, GIF, BMPなどをJPEGに変換）
+- 透明背景の画像は白色背景に変換
+- 連番管理（既存の番号の続きから番号付け）
+- 無効な画像ファイルの検出とスキップ
 
 ## 環境変数による設定
 
@@ -104,16 +135,21 @@ BACKGROUND_COLOR=white GRID_ROWS=5 GRID_COLS=5 ANIMATION_DURATION=5 python execu
 ```
 prfile_movie_source/
 ├── README.md
-├── execute.py          # メインスクリプト
-├── sliding_tiles.mp4   # 生成される動画ファイル
-└── source/            # 入力画像ディレクトリ
-    ├── image_01.jpeg
-    ├── image_02.jpeg
-    └── ...
+├── execute.py         # メイン動画生成スクリプト
+├── convert.py         # 画像変換スクリプト
+├── requirements.txt   # 依存パッケージリスト
+├── output/            # 出力動画ディレクトリ
+│   └── sliding_tiles.mp4   # 生成される動画ファイル
+├── source/            # 入力画像ディレクトリ
+│   ├── image_01.jpeg
+│   ├── image_02.jpeg
+│   └── ...
+└── upload/            # 画像アップロードディレクトリ
 ```
 
 ## 注意事項
 
 - 画像ファイルは連番で命名してください（image_01.jpeg, image_02.jpeg, ...）
 - 画像は自動的に指定されたアスペクト比（デフォルト4:3）にクロップされます
-- 一時ファイルは処理後に自動的に削除されます 
+- 一時ファイルは処理後に自動的に削除されます
+- 変換処理後、アップロードディレクトリの画像は削除されます
