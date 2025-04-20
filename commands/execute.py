@@ -195,8 +195,9 @@ for row in range(GRID_ROWS):
 background = ColorClip(size=(frame_w, frame_h), color=BACKGROUND_COLOR)
 background = background.set_duration(ANIMATION_DURATION)
 
-# 全てのクリップを合成
-composite = CompositeVideoClip([background] + clips, size=(frame_w, frame_h))
+# 全てのクリップを合成（グリッド全体）
+grid_composite = CompositeVideoClip([background] + clips, size=(frame_w, frame_h))
+grid_composite = grid_composite.set_duration(ANIMATION_DURATION)
 
 # 最終的な動画の枠サイズを設定
 if FRAME_SIZE_PRESET == 'HD':
@@ -212,24 +213,25 @@ else:  # 'AUTO'
     final_width = frame_w
     final_height = frame_h
 
-# スライド用のアニメーション（左→右）
-# SLIDE_SPEEDを適用してスライド速度を調整
-animated = composite.set_duration(ANIMATION_DURATION).set_position(
-    lambda t: (-frame_w * t * SLIDE_SPEED / ANIMATION_DURATION, 0)
-)
-
-# 指定されたサイズの背景を作成（最終的な動画サイズ）
+# 最終的な背景を作成
 final_background = ColorClip(size=(final_width, final_height), color=BACKGROUND_COLOR)
 final_background = final_background.set_duration(ANIMATION_DURATION)
 
-# アニメーションを中央に配置するための計算
-y_position = (final_height - frame_h) // 2 if final_height > frame_h else 0
+# グリッドが右から左にスライドするアニメーション関数
+def make_slide_animation(t):
+    # 右端から左端までスライド（フレーム幅分移動）
+    progress = t / ANIMATION_DURATION * SLIDE_SPEED
+    # 最初は画面右端から外にいて、最後は画面左端から外に出ていく
+    x_pos = final_width - (final_width + frame_w) * progress
+    # 垂直方向は中央に配置
+    y_pos = (final_height - frame_h) // 2 if final_height > frame_h else 0
+    return (x_pos, y_pos)
 
-# アニメーションのクリップを中央に配置
-positioned_animation = animated.set_position((0, y_position))
+# グリッドにアニメーションを適用
+sliding_grid = grid_composite.set_position(make_slide_animation)
 
 # 最終的な動画の作成
-final = CompositeVideoClip([final_background, positioned_animation], size=(final_width, final_height))
+final = CompositeVideoClip([final_background, sliding_grid], size=(final_width, final_height))
 final.write_videofile(OUTPUT_FILENAME, fps=FPS, codec='libx264')
 
 # 一時ファイルを削除
