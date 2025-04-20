@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # convert.sh
 #
@@ -16,7 +16,7 @@ echo "移動先ディレクトリ: $(pwd)"
 if [ -f "./commands/convert.sh" ]; then
     echo "commands/convert.shが見つかりました。実行します..."
     # commands/convert.shを呼び出す
-    ./commands/convert.sh
+    bash ./commands/convert.sh
 else
     echo "エラー: commands/convert.shが見つかりません。"
     echo "ファイル一覧:"

@@ -1,4 +1,4 @@
-#!/bin/bash
+#!/usr/bin/env bash
 
 # execute.sh
 #
@@ -16,7 +16,7 @@ echo "移動先ディレクトリ: $(pwd)"
 if [ -f "./commands/execute.sh" ]; then
     echo "commands/execute.shが見つかりました。実行します..."
     # commands/execute.shを呼び出す
-    ./commands/execute.sh
+    bash ./commands/execute.sh
 else
     echo "エラー: commands/execute.shが見つかりません。"
     echo "ファイル一覧:"
