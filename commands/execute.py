@@ -26,6 +26,7 @@ import cv2
 from pathlib import Path
 import time
 import subprocess
+import psutil
 
 # 色関連のユーティリティ関数
 def color_name_to_rgb(color_name):
@@ -367,6 +368,35 @@ except ImportError:
         cmd.append(output_file)
         return cmd
 
+# 最適化モジュールをインポート
+try:
+    from commands.metal_utils import MetalImageProcessor
+    METAL_AVAILABLE = True
+except ImportError:
+    METAL_AVAILABLE = False
+    print("Metal GPUの機能を使用できません。pyobjcパッケージをインストールすることで高速化できます。")
+
+try:
+    from commands.parallel_framework import OptimizedParallelProcessor
+    PARALLEL_FRAMEWORK_AVAILABLE = True
+except ImportError:
+    PARALLEL_FRAMEWORK_AVAILABLE = False
+    print("最適化された並列処理フレームワークを使用できません。")
+
+try:
+    from commands.ffmpeg_pipeline import FFmpegPipeline
+    FFMPEG_PIPELINE_AVAILABLE = True
+except ImportError:
+    FFMPEG_PIPELINE_AVAILABLE = False
+    print("FFmpegパイプラインを使用できません。")
+
+try:
+    from commands.ram_disk_utils import setup_ram_disk, cleanup_ram_disk, get_optimal_ramdisk_size
+    RAM_DISK_AVAILABLE = True
+except ImportError:
+    RAM_DISK_AVAILABLE = False
+    print("RAMディスク機能を使用できません。")
+
 # メイン処理関数を定義
 def main():
     # .envファイルから環境変数を読み込む
@@ -461,215 +491,234 @@ def main():
         print("エラー: 有効な画像が見つかりません。処理を中止します。")
         sys.exit(1)
 
-    # 並列処理を使用して画像を処理
-    if OPTIMIZE_AVAILABLE and PARALLEL_PROCESSING and len(image_files_list) > 3:
-        print(f"並列処理を使用して{len(image_files_list)}枚の画像を処理しています...")
-        
-        # 最適な並列ワーカー数を取得
-        worker_count = get_optimal_worker_count() if OPTIMIZE_AVAILABLE else min(os.cpu_count() or 1, 4)
-        print(f"並列処理ワーカー数: {worker_count}")
-        
-        # 画像を並列処理
+    # 最適化フラグを環境変数から設定
+    USE_GPU = os.getenv('USE_GPU', 'true').lower() == 'true'
+    USE_RAM_DISK = os.getenv('USE_RAM_DISK', 'true').lower() == 'true'
+    STREAM_PROCESSING = os.getenv('STREAM_PROCESSING', 'true').lower() == 'true'
+    
+    # システム情報を表示
+    print("\n--- システム情報 ---")
+    if OPTIMIZE_AVAILABLE:
+        print_system_report()
+    else:
+        print(f"CPU: {os.cpu_count()} コア")
+        print(f"メモリ: {psutil.virtual_memory().total / (1024**3):.1f} GB")
+    
+    # RAMディスクの設定
+    temp_dir = None
+    if USE_RAM_DISK and RAM_DISK_AVAILABLE:
         try:
-            # 並列処理で画像ファイルのパスのみを取得
-            temp_image_files = parallel_process_images(
-                image_files_list, 
-                process_image_parallel, 
-                workers=worker_count, 
-                aspect_ratio_w=ASPECT_RATIO_W, 
-                aspect_ratio_h=ASPECT_RATIO_H, 
+            optimal_size = get_optimal_ramdisk_size()
+            ram_disk_size = os.getenv('RAM_DISK_SIZE', optimal_size)
+            temp_dir = setup_ram_disk(size=ram_disk_size)
+            print(f"一時ファイル用RAMディスク: {temp_dir}")
+        except Exception as e:
+            print(f"RAMディスク設定エラー: {e}")
+            temp_dir = None
+    
+    try:
+        # Metal GPUプロセッサの初期化
+        metal_processor = None
+        if USE_GPU and METAL_AVAILABLE:
+            try:
+                metal_processor = MetalImageProcessor()
+                print("GPU処理を使用します")
+            except Exception as e:
+                print(f"GPU処理の初期化に失敗: {e}")
+                metal_processor = None
+        
+        # 並列処理フレームワークの初期化
+        thread_count = int(os.getenv('THREAD_COUNT', 0))
+        if PARALLEL_FRAMEWORK_AVAILABLE:
+            parallel_processor = OptimizedParallelProcessor(
+                worker_count=thread_count if thread_count > 0 else None
+            )
+        
+        # 画像ファイルのリストを生成
+        image_files_list = []
+        for i in range(START_IMAGE_NUMBER, END_IMAGE_NUMBER + 1):
+            image_path = get_image_filename(i)
+            if os.path.exists(image_path):
+                image_files_list.append(image_path)
+        
+        # 画像サイズの計算
+        image_width_list = [IMAGE_HEIGHT * ASPECT_RATIO_W / ASPECT_RATIO_H] * len(image_files_list)
+        target_sizes = [(int(image_width), int(IMAGE_HEIGHT)) for image_width in image_width_list]
+        
+        # 画像処理
+        processed_images = []
+        
+        if metal_processor is not None and USE_GPU:
+            # GPU処理
+            print("GPUを使用して画像を処理しています...")
+            processed_images = metal_processor.process_batch(image_files_list, target_sizes)
+        elif PARALLEL_FRAMEWORK_AVAILABLE:
+            # 最適化された並列処理
+            print("最適化された並列処理で画像を処理しています...")
+            processed_images = parallel_processor.process_batch(
+                image_files_list,
+                process_image_parallel,
+                io_bound=False,
+                batch_size=MEMORY_BATCH_SIZE,
+                aspect_ratio_w=ASPECT_RATIO_W,
+                aspect_ratio_h=ASPECT_RATIO_H,
                 crop_position=CROP_POSITION,
                 image_height=IMAGE_HEIGHT
             )
-            
-            # 無効な結果をフィルタリング
-            temp_image_files = [path for path in temp_image_files if path is not None]
-            
-            # 有効な結果があるか確認
-            if not temp_image_files:
-                raise ValueError("有効な処理結果がありません。通常処理にフォールバックします。")
-                
-            # ここでImageClipオブジェクトを作成（一括で処理）
-            print(f"{len(temp_image_files)}枚の画像をクリップに変換しています...")
-            images = [ImageClip(img_path).resize(height=IMAGE_HEIGHT) for img_path in temp_image_files]
-            
-        except Exception as e:
-            print(f"並列処理中にエラーが発生しました。通常処理にフォールバックします: {e}")
-            # 通常の逐次処理にフォールバック
-            temp_image_files = []
-            for img_path in image_files_list:
-                temp_path = crop_image_to_aspect_ratio(img_path, ASPECT_RATIO_W, ASPECT_RATIO_H, CROP_POSITION)
-                if temp_path:
-                    temp_image_files.append(temp_path)
-            
-            # 有効な画像があるか確認
-            if not temp_image_files:
-                print("エラー: 有効な画像が処理できませんでした。処理を中止します。")
-                sys.exit(1)
-                
-            # ImageClipを作成
-            images = [ImageClip(img).resize(height=IMAGE_HEIGHT) for img in temp_image_files]
-    else:
-        # 通常の逐次処理
-        print(f"{len(image_files_list)}枚の画像を処理しています...")
-        # まず画像をトリミング
-        temp_image_files = []
-        for img_path in image_files_list:
-            temp_path = crop_image_to_aspect_ratio(img_path, ASPECT_RATIO_W, ASPECT_RATIO_H, CROP_POSITION)
-            if temp_path:
-                temp_image_files.append(temp_path)
-        
-        # 有効な画像があるか確認
-        if not temp_image_files:
-            print("エラー: 有効な画像が処理できませんでした。処理を中止します。")
-            sys.exit(1)
-        
-        # 次にImageClipを作成
-        images = [ImageClip(img).resize(height=IMAGE_HEIGHT) for img in temp_image_files]
-
-    # グリッド状に配置（ギャップを含む）
-    if not images:
-        print("エラー: 有効な画像が処理できませんでした。処理を中止します。")
-        sys.exit(1)
-        
-    tile_width = images[0].w
-    tile_height = images[0].h
-
-    # ギャップを含めたフレームサイズを計算
-    frame_w = (tile_width * GRID_COLS) + (GAP_HORIZONTAL * (GRID_COLS - 1))
-    frame_h = (tile_height * GRID_ROWS) + (GAP_VERTICAL * (GRID_ROWS - 1))
-
-    # 画像をグリッドに配置（ギャップ付き）
-    clips = []
-    for row in range(GRID_ROWS):
-        row_clips = []
-        for col in range(GRID_COLS):
-            idx = row * GRID_COLS + col
-            if idx < len(images):
-                # 画像の位置を計算（ギャップを含む）
-                x = col * (tile_width + GAP_HORIZONTAL)
-                y = row * (tile_height + GAP_VERTICAL)
-                clip = images[idx].set_position((x, y))
-                row_clips.append(clip)
-        if row_clips:
-            clips.extend(row_clips)
-
-    # 背景クリップを作成
-    background = ColorClip(size=(frame_w, frame_h), color=BACKGROUND_COLOR)
-    background = background.set_duration(ANIMATION_DURATION)
-
-    # 全てのクリップを合成（グリッド全体）
-    grid_composite = CompositeVideoClip([background] + clips, size=(frame_w, frame_h))
-    grid_composite = grid_composite.set_duration(ANIMATION_DURATION)
-
-    # 最終的な動画の枠サイズを設定
-    if FRAME_SIZE_PRESET == 'HD':
-        final_width = 1920
-        final_height = 1080
-    elif FRAME_SIZE_PRESET == 'HD_HALF':
-        final_width = 1920
-        final_height = 540
-    elif FRAME_SIZE_PRESET == 'CUSTOM':
-        final_width = FRAME_WIDTH
-        final_height = FRAME_HEIGHT
-    else:  # 'AUTO'
-        final_width = frame_w
-        final_height = frame_h
-
-    # 最終的な背景を作成
-    final_background = ColorClip(size=(final_width, final_height), color=BACKGROUND_COLOR)
-    final_background = final_background.set_duration(ANIMATION_DURATION)
-
-    # グリッドが右から左にスライドするアニメーション関数
-    def make_slide_animation(t):
-        # 右端から左端までスライド（フレーム幅分移動）
-        progress = t / ANIMATION_DURATION * SLIDE_SPEED
-        # 最初は画面右端から外にいて、最後は画面左端から外に出ていく
-        x_pos = final_width - (final_width + frame_w) * progress
-        # 垂直方向は中央に配置
-        y_pos = (final_height - frame_h) // 2 if final_height > frame_h else 0
-        return (x_pos, y_pos)
-
-    # グリッドにアニメーションを適用
-    sliding_grid = grid_composite.set_position(make_slide_animation)
-
-    # 最終的な動画の作成
-    final = CompositeVideoClip([final_background, sliding_grid], size=(final_width, final_height))
-
-    # 最適化モジュールが利用可能で、VideoToolboxを使用する場合
-    if OPTIMIZE_AVAILABLE and USE_VIDEOTOOLBOX:
-        # VideoToolboxが利用可能かチェック
-        vt_available = False
-        try:
-            vt_available = use_videotoolbox_encoding()
-        except TypeError:
-            # 古い関数シグネチャの場合は直接ffmpegで確認
-            try:
-                result = subprocess.run(["ffmpeg", "-encoders"], stdout=subprocess.PIPE, text=True, check=False)
-                vt_available = "h264_videotoolbox" in result.stdout
-            except:
-                vt_available = False
-
-        if vt_available:
-            print("Apple Silicon向け最適化モードで動画をエンコードします...")
-            
-            # 一時ディレクトリに画像シーケンスとして保存
-            temp_dir = os.path.join(os.path.dirname(OUTPUT_FILENAME), "temp_frames")
-            os.makedirs(temp_dir, exist_ok=True)
-            
-            try:
-                # 画像シーケンスとして保存（write_framesの代わりにto_ImageClipで処理）
-                print("フレームを画像シーケンスとして保存しています...")
-                # 全フレームを生成してから保存する方法に変更
-                for i, frame in enumerate(final.iter_frames(fps=FPS)):
-                    frame_path = os.path.join(temp_dir, f"frame_{i:04d}.jpg")
-                    # numpyのarrayをPIL Imageに変換して保存
-                    Image.fromarray(frame).save(frame_path, quality=95)
-                    # 進捗を表示
-                    if i % 10 == 0:
-                        print(f"フレーム保存進捗: {i}/{int(ANIMATION_DURATION * FPS)}")
-                
-                # 最適化されたFFmpegコマンドを生成
-                resolution = (final_width, final_height)
-                high_quality = FFMPEG_PRESET in ['slow', 'medium']
-                
-                # FFmpegで動画を生成
-                ffmpeg_cmd = create_optimized_ffmpeg_command(
-                    os.path.join(temp_dir, "frame_%04d.jpg"),
-                    OUTPUT_FILENAME,
-                    fps=FPS,
-                    resolution=resolution,
-                    high_quality=high_quality
-                )
-                
-                print(f"FFmpegコマンドを実行: {' '.join(ffmpeg_cmd)}")
-                subprocess.run(ffmpeg_cmd, check=True)
-                print(f"動画の生成が完了しました: {OUTPUT_FILENAME}")
-            except Exception as e:
-                import traceback
-                print(f"最適化エンコーディングに失敗しました。標準モードにフォールバックします: {e}")
-                traceback.print_exc()
-                final.write_videofile(OUTPUT_FILENAME, fps=FPS, codec='libx264')
-            finally:
-                # 一時ディレクトリの削除
-                import shutil
-                shutil.rmtree(temp_dir, ignore_errors=True)
         else:
-            # 標準のMoviePyエンコーディングを使用
-            print("標準モードで動画をエンコードします（VideoToolboxは利用できません）...")
-            final.write_videofile(OUTPUT_FILENAME, fps=FPS, codec='libx264')
-    else:
-        # 標準のMoviePyエンコーディングを使用
-        print("標準モードで動画をエンコードします...")
-        final.write_videofile(OUTPUT_FILENAME, fps=FPS, codec='libx264')
-
-    # 一時ファイルを削除
-    for temp_file in temp_image_files:
+            # 従来の処理方法
+            print("従来の方法で画像を処理しています...")
+            if OPTIMIZE_AVAILABLE:
+                processed_images = parallel_process_images(
+                    image_files_list,
+                    process_image_parallel,
+                    aspect_ratio_w=ASPECT_RATIO_W, 
+                    aspect_ratio_h=ASPECT_RATIO_H,
+                    crop_position=CROP_POSITION,
+                    image_height=IMAGE_HEIGHT
+                )
+            else:
+                # 従来の非並列処理
+                for img_path in image_files_list:
+                    processed_img = process_image_parallel(
+                        img_path, 
+                        ASPECT_RATIO_W, 
+                        ASPECT_RATIO_H, 
+                        CROP_POSITION, 
+                        IMAGE_HEIGHT
+                    )
+                    if processed_img:
+                        processed_images.append(processed_img)
+        
+        # 処理された画像のパスを確認
+        print(f"処理された画像数: {len(processed_images)}")
+        if not processed_images:
+            print("エラー: 処理された画像がありません。")
+            return
+        
+        # 最終的な動画の枠サイズを設定
+        if FRAME_SIZE_PRESET == 'HD':
+            final_width = 1920
+            final_height = 1080
+        elif FRAME_SIZE_PRESET == 'HD_HALF':
+            final_width = 1920
+            final_height = 540
+        elif FRAME_SIZE_PRESET == 'CUSTOM':
+            final_width = FRAME_WIDTH
+            final_height = FRAME_HEIGHT
+        else:  # 'AUTO'
+            # 必要な変数を定義
+            tile_width = IMAGE_HEIGHT * ASPECT_RATIO_W / ASPECT_RATIO_H
+            tile_height = IMAGE_HEIGHT
+            frame_w = (tile_width * GRID_COLS) + (GAP_HORIZONTAL * (GRID_COLS - 1))
+            frame_h = (tile_height * GRID_ROWS) + (GAP_VERTICAL * (GRID_ROWS - 1))
+            final_width = frame_w
+            final_height = frame_h
+        
+        # 背景色の設定
         try:
-            os.remove(temp_file)
+            background_color = parse_background_color(BACKGROUND_COLOR)
         except:
-            pass
+            print(f"警告: 無効な背景色指定 {BACKGROUND_COLOR}, 白色を使用します")
+            background_color = (255, 255, 255)
+
+        # 動画生成部分
+        if FFMPEG_PIPELINE_AVAILABLE and STREAM_PROCESSING:
+            ffmpeg_pipeline = FFmpegPipeline(use_videotoolbox=USE_VIDEOTOOLBOX)
+            
+            # フレーム生成関数の定義
+            def generate_frame(frame_idx):
+                # 時間点の計算
+                t = frame_idx / (FPS * ANIMATION_DURATION)
+                
+                # スライド位置を計算
+                progress = t / ANIMATION_DURATION * SLIDE_SPEED
+                # 最初は画面右端から外にいて、最後は画面左端から外に出ていく
+                x_pos = final_width - (final_width + frame_w) * progress
+                
+                # 背景を作成
+                background = np.zeros((final_height, final_width, 3), dtype=np.uint8)
+                background[:, :] = background_color
+                
+                # 各画像を合成
+                for idx, processed_img_path in enumerate(processed_images):
+                    if processed_img_path is None:
+                        continue
+                    
+                    # 画像の行と列の位置を計算
+                    row = idx // GRID_COLS
+                    col = idx % GRID_COLS
+                    
+                    # 画像を読み込む
+                    img = cv2.imread(processed_img_path)
+                    if img is None:
+                        continue
+                    
+                    # 画像の位置を計算（スライドアニメーション考慮）
+                    img_width = img.shape[1]
+                    img_height = img.shape[0]
+                    
+                    x = col * (img_width + GAP_HORIZONTAL) + int(x_pos)
+                    y = row * (img_height + GAP_VERTICAL)
+                    if final_height > frame_h:
+                        y += (final_height - frame_h) // 2
+                    
+                    # 画像が表示範囲内にある場合のみ描画
+                    if (x < final_width and x + img_width > 0 and 
+                        y < final_height and y + img_height > 0):
+                        
+                        # 画像の表示範囲を計算
+                        x_start = max(0, x)
+                        y_start = max(0, y)
+                        x_end = min(final_width, x + img_width)
+                        y_end = min(final_height, y + img_height)
+                        
+                        # 画像のソース領域を計算
+                        src_x_start = max(0, -x)
+                        src_y_start = max(0, -y)
+                        src_width = x_end - x_start
+                        src_height = y_end - y_start
+                        
+                        # 画像を背景に合成
+                        if src_width > 0 and src_height > 0:
+                            background[y_start:y_end, x_start:x_end] = img[
+                                src_y_start:src_y_start+src_height, 
+                                src_x_start:src_x_start+src_width
+                            ]
+                
+                return background
+            
+            # ストリーミング処理で動画を生成
+            success = ffmpeg_pipeline.stream_frames_to_video(
+                generate_frame,
+                OUTPUT_FILENAME,
+                frame_count=int(FPS * ANIMATION_DURATION),
+                fps=FPS,
+                resolution=(final_width, final_height)
+            )
+            
+            if not success:
+                print("ストリーミング処理に失敗しました。従来の方法にフォールバックします...")
+                # ここに従来の動画生成コード
+                # ...
+        else:
+            # 既存の動画生成コード
+            # ...
     
+    finally:
+        # クリーンアップ処理
+        # 一時ファイルの削除
+        for img_path in processed_images:
+            if img_path and os.path.exists(img_path):
+                try:
+                    os.remove(img_path)
+                except:
+                    pass
+        
+        # RAMディスクのクリーンアップ
+        if temp_dir and RAM_DISK_AVAILABLE:
+            cleanup_ram_disk(temp_dir)
+
     print(f"動画の生成が完了しました: {OUTPUT_FILENAME}")
 
 # Pythonスクリプトが直接実行された場合のみ実行
