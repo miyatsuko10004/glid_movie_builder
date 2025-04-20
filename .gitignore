@@ -6,7 +6,12 @@ env/
 # 生成されるファイル
 output/
 source/
+upload/
 temp_*.jpeg
+apps/
+
+# AppleScript関連
+*.app
 
 # Python
 __pycache__/
