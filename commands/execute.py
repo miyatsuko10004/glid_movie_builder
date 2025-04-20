@@ -73,7 +73,14 @@ GRID_ROWS = int(os.getenv('GRID_ROWS', 6))
 GRID_COLS = int(os.getenv('GRID_COLS', 6))
 ANIMATION_DURATION = int(os.getenv('ANIMATION_DURATION', 4))
 FPS = int(os.getenv('FPS', 30))
-OUTPUT_FILENAME = os.getenv('OUTPUT_FILENAME', 'output/sliding_tiles.mp4')  # デフォルトでoutputディレクトリを使用
+
+# プロジェクトルートディレクトリのパスを取得
+ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+
+# 出力ファイル名（プロジェクトルートからの相対パス）
+output_path = os.getenv('OUTPUT_FILENAME', 'output/sliding_tiles.mp4')
+OUTPUT_FILENAME = os.path.join(ROOT_DIR, output_path)
+
 ASPECT_RATIO_W = int(os.getenv('ASPECT_RATIO_W', 4))
 ASPECT_RATIO_H = int(os.getenv('ASPECT_RATIO_H', 3))
 CROP_POSITION = os.getenv('CROP_POSITION', 'center')
@@ -124,9 +131,12 @@ def crop_image_to_aspect_ratio(image_path, aspect_ratio_w, aspect_ratio_h, crop_
 
 # 画像ファイル名を生成する関数
 def get_image_filename(i):
+    # プロジェクトルートディレクトリのパスを取得
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
     if i in [7, 8, 9]:
-        return f"source/image_{i}.jpeg"
-    return f"source/image_{i:02}.jpeg"
+        return os.path.join(root_dir, f"source/image_{i}.jpeg")
+    return os.path.join(root_dir, f"source/image_{i:02}.jpeg")
 
 # 画像を読み込み、トリミングして一時ファイルとして保存
 image_files = [get_image_filename(i) for i in range(START_IMAGE_NUMBER, END_IMAGE_NUMBER + 1)]

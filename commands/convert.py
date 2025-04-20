@@ -28,8 +28,11 @@ def ensure_directories():
     Returns:
         tuple: (uploadディレクトリのパス, sourceディレクトリのパス)
     """
-    upload_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "upload")
-    source_dir = os.path.join(os.path.dirname(os.path.abspath(__file__)), "source")
+    # ファイルが存在するディレクトリ（commands）から一つ上のディレクトリ（プロジェクトルート）を取得
+    root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
+    
+    upload_dir = os.path.join(root_dir, "upload")
+    source_dir = os.path.join(root_dir, "source")
     
     # ディレクトリが存在しない場合は作成
     os.makedirs(upload_dir, exist_ok=True)
