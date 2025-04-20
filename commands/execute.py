@@ -74,6 +74,8 @@ GRID_ROWS = int(os.getenv('GRID_ROWS', 6))
 GRID_COLS = int(os.getenv('GRID_COLS', 6))
 ANIMATION_DURATION = int(os.getenv('ANIMATION_DURATION', 4))
 FPS = int(os.getenv('FPS', 30))
+# スライド速度の設定（1.0が通常速度、2.0は2倍速、0.5は半分速度）
+SLIDE_SPEED = float(os.getenv('SLIDE_SPEED', 1.0))
 
 # プロジェクトルートディレクトリのパスを取得
 ROOT_DIR = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
@@ -190,8 +192,9 @@ background = background.set_duration(ANIMATION_DURATION)
 composite = CompositeVideoClip([background] + clips, size=(frame_w, frame_h))
 
 # スライド用のアニメーション（左→右）
+# SLIDE_SPEEDを適用してスライド速度を調整
 animated = composite.set_duration(ANIMATION_DURATION).set_position(
-    lambda t: (-frame_w * t / ANIMATION_DURATION, 0)
+    lambda t: (-frame_w * t * SLIDE_SPEED / ANIMATION_DURATION, 0)
 )
 
 # 動画として書き出し

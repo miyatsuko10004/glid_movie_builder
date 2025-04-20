@@ -192,6 +192,7 @@ BACKGROUND_COLOR=white GRID_ROWS=5 GRID_COLS=5 ANIMATION_DURATION=5 ./execute.sh
 | GRID_COLS | グリッドの列数 | 6 |
 | ANIMATION_DURATION | アニメーション時間（秒） | 4 |
 | FPS | フレームレート | 30 |
+| SLIDE_SPEED | スライド速度（1.0が通常、2.0は2倍速、0.5は半分速度） | 1.0 |
 | OUTPUT_FILENAME | 出力ファイル名 | output/sliding_tiles.mp4 |
 | ASPECT_RATIO_W | アスペクト比（幅） | 4 |
 | ASPECT_RATIO_H | アスペクト比（高さ） | 3 |
