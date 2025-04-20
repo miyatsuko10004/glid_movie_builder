@@ -111,13 +111,13 @@ def convert_and_move_images(upload_dir, source_dir):
     processed_count = 0
     
     # 各画像ファイルを処理
-    for i, image_file in enumerate(image_files):
+    for image_file in image_files:
         # 有効な画像ファイルかどうか確認
         if not is_valid_image(image_file):
             continue
         
-        # 新しい画像番号
-        new_number = last_number + i + 1
+        # 新しい画像番号 (イテレーション毎に増加するのではなく、成功した画像の数に基づく)
+        new_number = last_number + processed_count + 1
         
         # 新しいファイル名 (2桁の数字形式)
         if new_number < 10:
