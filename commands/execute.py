@@ -134,9 +134,8 @@ def get_image_filename(i):
     # プロジェクトルートディレクトリのパスを取得
     root_dir = os.path.dirname(os.path.dirname(os.path.abspath(__file__)))
     
-    if i in [7, 8, 9]:
-        return os.path.join(root_dir, f"source/image_{i}.jpeg")
-    return os.path.join(root_dir, f"source/image_{i:02}.jpeg")
+    # すべての画像に対して2桁のゼロパディングを使用
+    return os.path.join(root_dir, f"source/image_{i:02d}.jpeg")
 
 # 画像を読み込み、トリミングして一時ファイルとして保存
 image_files = [get_image_filename(i) for i in range(START_IMAGE_NUMBER, END_IMAGE_NUMBER + 1)]
