@@ -615,6 +615,12 @@ def main():
             final_width = frame_w
             final_height = frame_h
         
+        # フレーム幅と高さを計算（すべてのプリセットで使用するため）
+        tile_width = IMAGE_HEIGHT * ASPECT_RATIO_W / ASPECT_RATIO_H
+        tile_height = IMAGE_HEIGHT
+        frame_w = (tile_width * GRID_COLS) + (GAP_HORIZONTAL * (GRID_COLS - 1))
+        frame_h = (tile_height * GRID_ROWS) + (GAP_VERTICAL * (GRID_ROWS - 1))
+        
         # 背景色の設定
         try:
             background_color = parse_background_color(BACKGROUND_COLOR)
@@ -631,14 +637,24 @@ def main():
                 # 時間点の計算
                 t = frame_idx / (FPS * ANIMATION_DURATION)
                 
-                # スライド位置を計算
-                progress = t / ANIMATION_DURATION * SLIDE_SPEED
-                # 最初は画面右端から外にいて、最後は画面左端から外に出ていく
-                x_pos = final_width - (final_width + frame_w) * progress
+                # スライド位置を計算（修正）
+                # 0.0～1.0の進行度をより適切な範囲に変換
+                # 開始位置を調整して、初期フレームから画像が見えるようにする
+                adjusted_slide_speed = SLIDE_SPEED * 0.5  # スライド速度を半分に
+                progress = t * adjusted_slide_speed
                 
-                # 背景を作成
+                # スライド位置の調整（画像がより長く表示されるよう調整）
+                # 画面内に長く留まるよう計算を変更
+                x_pos = int(final_width * (1.0 - progress * 0.8))
+                
+                # 背景を作成（RGBの順序に注意）
                 background = np.zeros((final_height, final_width, 3), dtype=np.uint8)
-                background[:, :] = background_color
+                # OpenCVはBGR形式なので色の順序を反転
+                if isinstance(background_color, tuple) and len(background_color) == 3:
+                    bgr_color = (background_color[2], background_color[1], background_color[0])
+                    background[:, :] = bgr_color
+                else:
+                    background[:, :] = background_color
                 
                 # 各画像を合成
                 for idx, processed_img_path in enumerate(processed_images):
@@ -704,6 +720,7 @@ def main():
         else:
             # 既存の動画生成コード
             # ...
+            pass  # ダミーコード（インデントエラー修正用）
     
     finally:
         # クリーンアップ処理

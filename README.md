@@ -1,12 +1,37 @@
 # グリッド動画生成ツール
 
-このツールは、複数の画像をグリッド状に配置し、横スライドするアニメーション動画を生成します。Apple Siliconチップを搭載したMacでは、ハードウェアアクセラレーションを活用して高速処理を実現します。
+このツールは、複数の画像をグリッド状に配置し、横スライドするアニメーション動画を生成します。Apple Siliconチップを搭載したMacでは、Metal GPUハードウェアアクセラレーションを活用して高速処理を実現します。
+
+## 新機能 (v2.0)
+
+このバージョンでは、以下の高度な最適化機能が追加されました：
+
+### 🚀 Metal GPU最適化
+- Apple Silicon搭載Macでは、Metal GPUを活用した画像処理が可能になりました
+- 画像のリサイズと処理をCPUからGPUに移行し、CPU負荷を大幅に軽減
+- GPUメモリ管理の最適化によりより大きな画像も高速処理
+
+### 🧠 高度な並列処理フレームワーク
+- 最適化された並列処理フレームワークによる効率的なマルチコア活用
+- Apple Siliconチップの効率コアとパフォーマンスコアを考慮した負荷分散
+- メモリ使用量の動的モニタリングとガベージコレクション制御
+
+### 🔄 ストリーミング処理
+- 一時ファイルを使用しない効率的なストリーミングパイプライン
+- フレームのリアルタイム生成とFFmpegへの直接送信
+- ディスクI/O削減による処理時間短縮
+
+### 💾 RAMディスク活用
+- macOSでのRAMディスク自動作成機能
+- 一時ファイル処理の高速化
+- 利用可能なメモリに基づく最適なRAMディスクサイズの自動計算
 
 ## 必要な環境
 
 - Python 3.11以上
 - pip（Pythonパッケージマネージャー）
 - FFmpeg（動画エンコーディングに使用）
+- pyobjc（Metal GPU機能を使用する場合、Macのみ）
 
 ## 注意事項
 
@@ -43,7 +68,9 @@ venv\Scripts\activate  # Windows
 ```bash
 pip install -r requirements.txt
 # または
-pip install opencv-python moviepy==1.0.3 numpy python-dotenv Pillow
+pip install opencv-python moviepy==1.0.3 numpy python-dotenv Pillow psutil
+# Metal GPU機能を使用する場合（macOSのみ）
+pip install pyobjc
 ```
 
 3. 必要なディレクトリの作成
@@ -131,12 +158,27 @@ osacompile -o apps/Execute.app Execute.applescript
 - マルチコア処理を利用して複数の画像を同時に処理
 - 最適なコア数を自動的に検出して効率的に使用
 - 大量の画像処理時に処理時間を大幅に短縮
+- Apple Siliconチップのパフォーマンスコアと効率コアを考慮した最適化
 
 ### ハードウェアアクセラレーション
 
-- Apple Siliconチップでは VideoToolbox による高速エンコーディングを使用
+- Metal GPUを活用した画像処理（Apple Siliconのみ）
+- Apple Siliconチップでは VideoToolbox による高速エンコーディング
 - 最適化されたFFmpegコマンドで効率的な動画生成
 - ハードウェアの特性に応じた最適なエンコーディングパラメータを自動設定
+
+### メモリ最適化
+
+- メモリ使用量の動的モニタリングと管理
+- バッチサイズの自動調整によるメモリ効率の最大化
+- 処理中の定期的なガベージコレクションによるメモリリークの防止
+- RAMディスクの活用による一時ファイル処理の高速化（macOSのみ）
+
+### ストリーミング処理
+
+- フレームのリアルタイム生成と直接エンコーディング
+- 一時ファイルを使用しない効率的なパイプライン
+- ディスクI/Oを最小限に抑えた処理フロー
 
 ### フォールバックメカニズム
 
@@ -184,6 +226,13 @@ FPS=30
 
 # 出力設定
 OUTPUT_FILENAME=output/sliding_tiles.mp4
+
+# 最適化設定
+PARALLEL_PROCESSING=true
+USE_VIDEOTOOLBOX=true
+USE_GPU=true
+USE_RAM_DISK=true
+STREAM_PROCESSING=true
 ```
 
 ### コマンドラインでの設定
@@ -205,6 +254,9 @@ FRAME_SIZE_PRESET=HD ./execute.sh
 
 # 1920x540のワイド動画を生成
 FRAME_SIZE_PRESET=HD_HALF ./execute.sh
+
+# Metal GPU処理を無効化
+USE_GPU=false ./execute.sh
 
 # 複数の設定を組み合わせる
 BACKGROUND_COLOR=white GRID_ROWS=5 GRID_COLS=5 ANIMATION_DURATION=5 FRAME_SIZE_PRESET=HD ./execute.sh
@@ -236,11 +288,21 @@ BACKGROUND_COLOR=white GRID_ROWS=5 GRID_COLS=5 ANIMATION_DURATION=5 FRAME_SIZE_P
 | USE_VIDEOTOOLBOX | VideoToolboxによるハードウェアエンコーディングを使用（true/false） | true |
 | FFMPEG_PRESET | FFmpegエンコーディングプリセット（ultrafast〜slow） | faster |
 | BITRATE | 動画ビットレート | 5M |
-| MEMORY_BATCH_SIZE | メモリバッチサイズ（大きな値はメモリを多く使用） | 30 |
+| MEMORY_BATCH_SIZE | メモリバッチサイズ（大きな値はメモリを多く使用） | 50 |
+| USE_GPU | Metal GPUを使用した画像処理を有効化（true/false） | true |
+| USE_RAM_DISK | RAMディスクを使用した一時ファイル処理を有効化（true/false） | true |
+| STREAM_PROCESSING | ストリーミング処理による動画生成を有効化（true/false） | true |
+| THREAD_COUNT | 並列処理のスレッド数（0=自動） | 0 |
+| RAM_DISK_SIZE | RAMディスクのサイズ（例: 4G, 512M） | 自動 |
+| TEMP_DIR | 一時ファイルの保存先 | /private/tmp/glid_processing |
 
 ## トラブルシューティング
 
 ### よくある問題と解決策
+
+#### 「Metal GPUの機能を使用できません」というメッセージが表示される
+- macOSで `pip install pyobjc` を実行して必要なライブラリをインストールしてください
+- Windows/Linuxでは Metal GPU 機能は利用できません
 
 #### 「並列処理中にエラーが発生しました」というメッセージが表示される
 - `.env`ファイルで`PARALLEL_PROCESSING=false`に設定して並列処理を無効化してみてください
@@ -251,8 +313,8 @@ BACKGROUND_COLOR=white GRID_ROWS=5 GRID_COLS=5 ANIMATION_DURATION=5 FRAME_SIZE_P
 - FFmpegがインストールされていることを確認してください
 
 #### 動画生成が非常に遅い
-- Apple SiliconのMacの場合は`.env`ファイルで`USE_VIDEOTOOLBOX=true`に設定してハードウェアエンコーディングを有効化してください
-- `.env`ファイルで`PARALLEL_PROCESSING=true`に設定して並列処理を有効化してください
+- Apple SiliconのMacの場合は `.env`ファイルで`USE_GPU=true`に設定してGPU処理を有効化してください
+- `.env`ファイルで`STREAM_PROCESSING=true`に設定してストリーミング処理を有効化してください
 - 画像数を減らすか、解像度（`IMAGE_HEIGHT`）を下げてみてください
 
 #### メモリエラーが発生する
@@ -276,7 +338,11 @@ glid_movie_builder/
 │   ├── convert.sh      # 画像変換シェルスクリプト
 │   ├── execute.py      # 動画生成スクリプト
 │   ├── execute.sh      # 動画生成シェルスクリプト
-│   └── optimize_utils.py # 最適化ユーティリティ
+│   ├── optimize_utils.py # 最適化ユーティリティ
+│   ├── metal_utils.py  # Metal GPU画像処理
+│   ├── parallel_framework.py # 並列処理フレームワーク
+│   ├── ffmpeg_pipeline.py # FFmpegパイプライン
+│   └── ram_disk_utils.py # RAMディスク管理
 ├── utils/              # 追加ユーティリティディレクトリ
 ├── apps/               # macOS用アプリケーションディレクトリ (生成後)
 │   ├── Convert.app     # 画像変換アプリケーション
@@ -298,11 +364,14 @@ glid_movie_builder/
 - 一時ファイルは処理後に自動的に削除されます
 - 変換処理後、アップロードディレクトリの画像は削除されます
 - 大量の画像（100枚以上）を処理する場合はメモリ使用量に注意してください
+- Metal GPU機能はmacOSのみで利用可能です
+- RAMディスク機能はmacOSのみで利用可能です
 
 ## 最近の更新と改善
 
-- 並列処理の安定性向上: 画像処理中のピクリング問題を解決
-- メモリ使用の最適化: 大量の画像処理時のメモリ効率を改善
-- Apple Silicon向け最適化: VideoToolboxを使用したハードウェアエンコーディングを改善
+- Metal GPU最適化: Apple SiliconチップのMetal GPUを活用した高速画像処理を実装
+- メモリ使用の最適化: より効率的なメモリ管理とRAMディスク活用によるパフォーマンス向上
+- ストリーミング処理: 一時ファイルを使用しない効率的な動画生成パイプラインを実装
+- 並列処理の強化: 新しい並列処理フレームワークによる効率的なCPU使用
+- Apple Silicon向け最適化: VideoToolboxとMetal GPUの連携による処理速度の劇的向上
 - エラー処理強化: より詳細なエラーメッセージと堅牢なフォールバックメカニズムを実装
-- 画像処理の信頼性向上: 無効な画像ファイルの検出と適切なエラーハンドリングを強化
